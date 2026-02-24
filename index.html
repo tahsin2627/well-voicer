@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expressive Bangla Voice AI</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h2 { text-align: center; color: #4facfe; margin-top: 0; }
+        textarea {
+            width: 100%;
+            height: 120px;
+            background: #2a2a2a;
+            color: white;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            resize: none;
+        }
+        select, button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            background: #2a2a2a;
+            color: white;
+        }
+        button {
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:active { opacity: 0.8; }
+        audio { width: 100%; margin-top: 15px; display: none; }
+        .loading { text-align: center; display: none; color: #4facfe; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Bangla AI Voice</h2>
+    
+    <textarea id="textInput" placeholder="এখানে বাংলায় কিছু লিখুন... (Type something in Bangla...)"></textarea>
+    
+    <select id="emotionSelect">
+        <option value="normal">স্বাভাবিক (Normal)</option>
+        <option value="excited">উচ্ছ্বসিত (Excited)</option>
+        <option value="serious">গম্ভীর (Serious)</option>
+        <option value="story">গল্প বলা (Storytelling)</option>
+    </select>
+    
+    <button onclick="generateVoice()">Generate Voice</button>
+    <div id="loadingMessage" class="loading">Generating... please wait.</div>
+    
+    <audio id="audioPlayer" controls></audio>
+</div>
+
+<script>
+    async function generateVoice() {
+        const text = document.getElementById('textInput').value;
+        const emotion = document.getElementById('emotionSelect').value;
+        const audioPlayer = document.getElementById('audioPlayer');
+        const loading = document.getElementById('loadingMessage');
+
+        if (!text) return alert("Please enter some text!");
+
+        loading.style.display = 'block';
+        audioPlayer.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, emotion })
+            });
+
+            const data = await response.json();
+            
+            if (data.error) {
+                alert("Error: " + data.error);
+            } else {
+                audioPlayer.src = "data:audio/mp3;base64," + data.audioContent;
+                audioPlayer.style.display = 'block';
+                audioPlayer.play();
+            }
+        } catch (err) {
+            alert("Something went wrong!");
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
