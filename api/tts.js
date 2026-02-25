@@ -23,7 +23,8 @@ export default async function handler(req, res) {
   promptText += `Text to perform: ${text}`;
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    // Fixed: Explicitly using the -tts model to allow audio output
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -49,12 +50,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Safely extract the audio
+    // Safely extract the audio and its specific format
     const inlineData = data.candidates[0].content.parts[0].inlineData;
     
-    // Send it back cleanly to the frontend
+    // Send it back cleanly to the frontend with the mimeType
     res.status(200).json({ 
-      audioContent: inlineData.data
+      audioContent: inlineData.data,
+      mimeType: inlineData.mimeType
     });
     
   } catch (error) {
