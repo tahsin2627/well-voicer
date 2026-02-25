@@ -3,34 +3,31 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { text, emotion } = req.body;
+  const { text, voice } = req.body;
   const apiKey = process.env.GOOGLE_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key missing in Vercel settings!' });
   }
 
-  // Setting the voice based on a simple logic: 
-  // If 'excited' or 'story' we'll use Autonoe (Female), otherwise Zubenelgenubi (Male)
-  // You can also add a toggle to your HTML later to choose specifically!
-  const voiceName = (emotion === 'excited' || emotion === 'story') 
-    ? 'Autonoe' 
-    : 'Zubenelgenubi';
+  // The Magic Secret: We use a "Director's Note" to force automatic expression
+  const promptText = `Director's Note: Read the following Bangla text as a captivating historical Islamic epic story. Use a reverent, deeply emotional, and dramatic storytelling tone with natural human pacing.\n\nText to read: ${text}`;
 
   try {
-    // Calling the Gemini 2.5 TTS API
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-tts:predict?key=${apiKey}`, {
+    // Using the correct generateContent endpoint for Gemini 2.5
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-tts:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        generativeContent: {
-          parts: [{ text: text }]
-        },
+        contents: [{
+          parts: [{ text: promptText }]
+        }],
         generationConfig: {
+          responseModalities: ["AUDIO"],
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: voiceName 
+                voiceName: voice // This passes 'Autonoe' or 'Zubenelgenubi'
               }
             }
           }
@@ -44,9 +41,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Gemini returns the audio in a slightly different format
-    const audioData = data.predictions[0].audioContents;
-    res.status(200).json({ audioContent: audioData });
+    // Extracting the audio file correctly from the new Gemini structure
+    const inlineData = data.candidates[0].content.parts[0].inlineData;
+    
+    res.status(200).json({ 
+      audioContent: inlineData.data,
+      mimeType: inlineData.mimeType 
+    });
     
   } catch (error) {
     res.status(500).json({ error: 'Failed to connect to Gemini AI Studio' });
