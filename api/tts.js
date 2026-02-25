@@ -7,15 +7,23 @@ export default async function handler(req, res) {
   const apiKey = process.env.GOOGLE_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key missing in Vercel settings!' });
+    return res.status(500).json({ error: 'API key missing in Vercel!' });
   }
 
-  // The Director's Note forces the epic, emotional tone
-  const promptText = `Director's Note: Read the following Bangla text as a captivating historical Islamic epic story. Use a reverent, deeply emotional, and dramatic storytelling tone with natural human pacing.\n\nText to read: ${text}`;
+  // Determine the actual AI voice to use
+  const selectedVoice = voice === 'DUAL' ? 'Zubenelgenubi' : voice;
+
+  // The Advanced Core-Observation Prompt
+  let promptText = `Director's Note: Before speaking, analyze the cultural, historical, and emotional core of the following text, paying special attention to the deep linguistic nuances of Bangla or Arabic if present. Deliver this as a premium, captivating epic story. \n\n`;
+  
+  if (voice === 'DUAL') {
+    promptText += `CRITICAL INSTRUCTION: You must act in a "Dual Voice" format. Use a grounded, cinematic voice for all general narration. However, whenever you encounter dialogue (text inside quotes or spoken by a character), dramatically shift your vocal tone, pitch, and emotion to sound like a completely different person speaking.\n\n`;
+  }
+
+  promptText += `Text to perform: ${text}`;
 
   try {
-    // Explicitly targeting the Flash TTS model to bypass the Pro quota limit
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -27,7 +35,7 @@ export default async function handler(req, res) {
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: voice // Autonoe or Zubenelgenubi
+                voiceName: selectedVoice 
               }
             }
           }
@@ -41,15 +49,15 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Extract the base64 audio string
+    // Safely extract the audio
     const inlineData = data.candidates[0].content.parts[0].inlineData;
     
+    // Send it back cleanly to the frontend
     res.status(200).json({ 
-      audioContent: inlineData.data,
-      mimeType: inlineData.mimeType 
+      audioContent: inlineData.data
     });
     
   } catch (error) {
-    res.status(500).json({ error: 'Failed to connect to Gemini API. Please check your network.' });
+    res.status(500).json({ error: 'Failed to connect to AI server.' });
   }
 }
