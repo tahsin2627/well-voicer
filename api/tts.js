@@ -1,52 +1,54 @@
 export default async function handler(req, res) {
-  // Only allow POST requests from our frontend
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { text, emotion } = req.body;
-  const apiKey = process.env.GOOGLE_API_KEY; // We will add this in Vercel later
+  const apiKey = process.env.GOOGLE_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key is missing in Vercel setup!' });
+    return res.status(500).json({ error: 'API key missing in Vercel settings!' });
   }
 
-  // This is the "Expressive" magic using SSML
-  let ssmlText = `<speak>${text}</speak>`;
-  
-  if (emotion === 'excited') {
-    // Faster rate, higher pitch
-    ssmlText = `<speak><prosody rate="fast" pitch="+2st">${text}</prosody></speak>`;
-  } else if (emotion === 'serious') {
-    // Slower rate, lower pitch
-    ssmlText = `<speak><prosody rate="slow" pitch="-2st">${text}</prosody></speak>`;
-  } else if (emotion === 'story') {
-    // Moderate pace with slight emphasis
-    ssmlText = `<speak><prosody rate="medium" volume="loud">${text}</prosody></speak>`;
-  }
+  // Setting the voice based on a simple logic: 
+  // If 'excited' or 'story' we'll use Autonoe (Female), otherwise Zubenelgenubi (Male)
+  // You can also add a toggle to your HTML later to choose specifically!
+  const voiceName = (emotion === 'excited' || emotion === 'story') 
+    ? 'Autonoe' 
+    : 'Zubenelgenubi';
 
   try {
-    const googleResponse = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+    // Calling the Gemini 2.5 TTS API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-tts:predict?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        input: { ssml: ssmlText },
-        // Using the high-quality Bangladesh Bangla Wavenet Voice
-        voice: { languageCode: 'bn-BD', name: 'bn-BD-Wavenet-A' },
-        audioConfig: { audioEncoding: 'MP3' }
+        generativeContent: {
+          parts: [{ text: text }]
+        },
+        generationConfig: {
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: voiceName 
+              }
+            }
+          }
+        }
       })
     });
 
-    const data = await googleResponse.json();
+    const data = await response.json();
 
     if (data.error) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Send the audio file back to the phone
-    res.status(200).json({ audioContent: data.audioContent });
+    // Gemini returns the audio in a slightly different format
+    const audioData = data.predictions[0].audioContents;
+    res.status(200).json({ audioContent: audioData });
     
   } catch (error) {
-    res.status(500).json({ error: 'Failed to connect to Google' });
+    res.status(500).json({ error: 'Failed to connect to Gemini AI Studio' });
   }
 }
