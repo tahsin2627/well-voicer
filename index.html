@@ -144,8 +144,8 @@
             } else {
                 currentQuota--;
                 updateQuotaDisplay();
-                // Forcing WAV format ensures it plays on all mobile browsers
-                audioPlayer.src = "data:audio/wav;base64," + data.audioContent;
+                // Dynamically injecting the MIME type ensures it plays perfectly
+                audioPlayer.src = "data:" + data.mimeType + ";base64," + data.audioContent;
                 audioPlayer.style.display = 'block';
                 audioPlayer.play();
             }
