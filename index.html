@@ -19,28 +19,14 @@
         h2 { text-align: center; margin: 0 0 5px 0; font-size: 28px; color: var(--primary); letter-spacing: 1px; }
         p.tagline { text-align: center; font-size: 13px; color: #888; margin-bottom: 25px; letter-spacing: 0.5px; }
         
-        .quota-container {
-            background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px;
-            display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 20px;
-        }
+        .quota-container { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 20px; background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px; }
         .quota-text { color: #aaa; }
         .quota-value { color: var(--primary); font-weight: bold; }
 
-        textarea {
-            width: 100%; height: 160px; background: rgba(0,0,0,0.2); color: #fff;
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-            padding: 15px; font-size: 15px; box-sizing: border-box; margin-bottom: 15px;
-            resize: none; line-height: 1.6; transition: border 0.3s;
-        }
-        textarea:focus { outline: none; border-color: var(--primary); }
-
+        textarea { width: 100%; height: 160px; background: rgba(0,0,0,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; font-size: 15px; box-sizing: border-box; margin-bottom: 15px; resize: none; line-height: 1.6; }
         select, button { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 12px; border: none; font-size: 16px; }
-        select { background: rgba(0,0,0,0.2); color: var(--primary); border: 1px solid rgba(255,255,255,0.1); appearance: none; }
-        
-        button {
-            background: linear-gradient(135deg, #d4af37 0%, #aa8000 100%);
-            color: #000; font-weight: bold; cursor: pointer; transition: transform 0.1s, opacity 0.2s;
-        }
+        select { background: rgba(0,0,0,0.2); color: var(--primary); border: 1px solid rgba(255,255,255,0.1); }
+        button { background: linear-gradient(135deg, #d4af37 0%, #aa8000 100%); color: #000; font-weight: bold; cursor: pointer; }
         button:active { transform: scale(0.98); opacity: 0.9; }
 
         .progress-container { display: none; width: 100%; margin-bottom: 15px; }
@@ -62,7 +48,7 @@
         <span class="quota-value" id="quotaDisplay">15 Left</span>
     </div>
 
-    <textarea id="textInput" placeholder="Enter your epic Bangla or Arabic story here..."></textarea>
+    <textarea id="textInput" placeholder="Enter your epic Bangla or Arabic story here... (Keep it under 3-4 sentences to test!)"></textarea>
     
     <select id="voiceSelect">
         <option value="Autonoe">Female Storyteller (Autonoe)</option>
@@ -81,7 +67,6 @@
 </div>
 
 <script>
-    // Quota System (Local Storage)
     const MAX_QUOTA = 15;
     let currentQuota = localStorage.getItem('wellVoicerQuota');
     let lastDate = localStorage.getItem('wellVoicerDate');
@@ -96,7 +81,6 @@
     }
     updateQuotaDisplay();
 
-    // Loading Bar Logic
     let progressInterval;
     function startProgress() {
         document.getElementById('progressContainer').style.display = 'block';
@@ -104,7 +88,7 @@
         document.getElementById('audioPlayer').style.display = 'none';
         let p = 0;
         progressInterval = setInterval(() => {
-            if (p < 85) { p += Math.random() * 15; }
+            if (p < 85) { p += Math.random() * 10; }
             document.getElementById('progressFill').style.width = Math.floor(p) + '%';
             document.getElementById('progressText').innerText = Math.floor(p) + '%';
         }, 500);
@@ -118,7 +102,6 @@
         document.getElementById('generateBtn').disabled = false;
     }
 
-    // Audio Generation
     async function generateVoice() {
         const text = document.getElementById('textInput').value;
         const voice = document.getElementById('voiceSelect').value;
@@ -140,18 +123,24 @@
             completeProgress();
             
             if (data.error) {
-                alert("API Error: " + data.error);
-            } else {
+                alert("Generation Error: " + data.error);
+            } else if (data.audioContent) {
                 currentQuota--;
                 updateQuotaDisplay();
-                // Dynamically injecting the MIME type ensures it plays perfectly
-                audioPlayer.src = "data:" + data.mimeType + ";base64," + data.audioContent;
+                
+                // Forcing the MIME type ensures mobile browsers don't get confused
+                const mime = data.mimeType || "audio/wav";
+                audioPlayer.src = "data:" + mime + ";base64," + data.audioContent;
                 audioPlayer.style.display = 'block';
-                audioPlayer.play();
+                
+                // We ask it to play, but if the phone blocks it, we catch the error gracefully
+                audioPlayer.play().catch(e => {
+                    console.log("Phone blocked auto-play. User must tap play manually.", e);
+                });
             }
         } catch (err) {
             completeProgress();
-            alert("Network Error!");
+            alert("Network Error: Could not connect to Vercel.");
         }
     }
 </script>
