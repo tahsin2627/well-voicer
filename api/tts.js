@@ -10,53 +10,51 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key missing in Vercel!' });
   }
 
-  // Determine the actual AI voice to use
   const selectedVoice = voice === 'DUAL' ? 'Zubenelgenubi' : voice;
 
-  // The Advanced Core-Observation Prompt
-  let promptText = `Director's Note: Before speaking, analyze the cultural, historical, and emotional core of the following text, paying special attention to the deep linguistic nuances of Bangla or Arabic if present. Deliver this as a premium, captivating epic story. \n\n`;
-  
+  let promptText = `Director's Note: Analyze the cultural and emotional core of the following text. Deliver this as a premium, captivating epic story.\n\n`;
   if (voice === 'DUAL') {
-    promptText += `CRITICAL INSTRUCTION: You must act in a "Dual Voice" format. Use a grounded, cinematic voice for all general narration. However, whenever you encounter dialogue (text inside quotes or spoken by a character), dramatically shift your vocal tone, pitch, and emotion to sound like a completely different person speaking.\n\n`;
+    promptText += `CRITICAL INSTRUCTION: You must act in a "Dual Voice" format. Use a grounded voice for narration, but dramatically shift your vocal tone and pitch to sound like a different person whenever you read dialogue inside quotes.\n\n`;
   }
-
   promptText += `Text to perform: ${text}`;
 
   try {
-    // Fixed: Explicitly using the -tts model to allow audio output
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: promptText }]
-        }],
+        contents: [{ parts: [{ text: promptText }] }],
         generationConfig: {
           responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: selectedVoice 
-              }
-            }
-          }
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } }
         }
       })
     });
 
-    const data = await response.json();
+    // We catch the raw text first in case Vercel times out and sends an HTML error
+    const rawText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      return res.status(500).json({ error: 'Server Timeout: Try generating a shorter story.' });
+    }
 
     if (data.error) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Safely extract the audio and its specific format
+    // THE FIX: Check if the AI secretly returned text instead of audio
+    if (!data.candidates || !data.candidates[0].content.parts[0].inlineData) {
+      const warningText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Unknown AI rejection.";
+      return res.status(500).json({ error: "AI did not return audio. It said: " + warningText.substring(0, 100) });
+    }
+
     const inlineData = data.candidates[0].content.parts[0].inlineData;
     
-    // Send it back cleanly to the frontend with the mimeType
     res.status(200).json({ 
       audioContent: inlineData.data,
-      mimeType: inlineData.mimeType
+      mimeType: inlineData.mimeType || 'audio/wav'
     });
     
   } catch (error) {
