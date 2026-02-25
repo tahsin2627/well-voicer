@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expressive Bangla Voice AI</title>
+    <title>Well-Voicer | Epic Tales</title>
     <style>
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
+            font-family: 'Georgia', serif;
+            background-color: #0a0a0a;
+            color: #d4af37;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -18,62 +18,64 @@
         .container {
             width: 100%;
             max-width: 400px;
-            background: #1e1e1e;
-            padding: 20px;
+            background: #1a1a1a;
+            padding: 25px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #d4af37;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
         }
-        h2 { text-align: center; color: #4facfe; margin-top: 0; }
+        h2 { text-align: center; margin-top: 0; font-size: 26px; }
+        p.tagline { text-align: center; font-style: italic; font-size: 14px; margin-bottom: 20px; color: #aaaaaa; }
         textarea {
             width: 100%;
-            height: 120px;
-            background: #2a2a2a;
-            color: white;
-            border: 1px solid #333;
+            height: 180px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
             border-radius: 8px;
-            padding: 10px;
+            padding: 12px;
             font-size: 16px;
             box-sizing: border-box;
             margin-bottom: 15px;
             resize: none;
+            line-height: 1.5;
         }
         select, button {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             margin-bottom: 15px;
             border-radius: 8px;
             border: none;
             font-size: 16px;
-            background: #2a2a2a;
-            color: white;
         }
+        select { background: #222; color: #d4af37; border: 1px solid #555; }
         button {
-            background: linear-gradient(to right, #4facfe, #00f2fe);
-            color: black;
+            background: linear-gradient(to right, #d4af37, #aa8000);
+            color: #000;
             font-weight: bold;
             cursor: pointer;
+            transition: opacity 0.2s;
         }
         button:active { opacity: 0.8; }
         audio { width: 100%; margin-top: 15px; display: none; }
-        .loading { text-align: center; display: none; color: #4facfe; }
+        .loading { text-align: center; display: none; font-style: italic; margin-top: 10px; color: #d4af37; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Bangla AI Voice</h2>
+    <h2>Well-Voicer</h2>
+    <p class="tagline">"Ye, It's Really A Well Voicer!"<br><span style="font-size: 12px;">(Epic Storytelling Edition)</span></p>
     
-    <textarea id="textInput" placeholder="এখানে বাংলায় কিছু লিখুন... (Type something in Bangla...)"></textarea>
+    <textarea id="textInput" placeholder="এখানে ঐতিহাসিক বা মহাকাব্যিক গল্প লিখুন... (Enter your story here)"></textarea>
     
-    <select id="emotionSelect">
-        <option value="normal">স্বাভাবিক (Normal)</option>
-        <option value="excited">উচ্ছ্বসিত (Excited)</option>
-        <option value="serious">গম্ভীর (Serious)</option>
-        <option value="story">গল্প বলা (Storytelling)</option>
+    <select id="voiceSelect">
+        <option value="Autonoe">Female Voice (Autonoe)</option>
+        <option value="Zubenelgenubi">Male Voice (Zubenelgenubi)</option>
     </select>
     
-    <button onclick="generateVoice()">Generate Voice</button>
-    <div id="loadingMessage" class="loading">Generating... please wait.</div>
+    <button onclick="generateVoice()">Tell The Story</button>
+    <div id="loadingMessage" class="loading">Breathing life into the story... please wait.</div>
     
     <audio id="audioPlayer" controls></audio>
 </div>
@@ -81,11 +83,11 @@
 <script>
     async function generateVoice() {
         const text = document.getElementById('textInput').value;
-        const emotion = document.getElementById('emotionSelect').value;
+        const voice = document.getElementById('voiceSelect').value;
         const audioPlayer = document.getElementById('audioPlayer');
         const loading = document.getElementById('loadingMessage');
 
-        if (!text) return alert("Please enter some text!");
+        if (!text) return alert("Please enter a story!");
 
         loading.style.display = 'block';
         audioPlayer.style.display = 'none';
@@ -94,20 +96,20 @@
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, emotion })
+                body: JSON.stringify({ text, voice })
             });
 
             const data = await response.json();
             
             if (data.error) {
-                alert("Error: " + data.error);
+                alert("API Error: " + data.error);
             } else {
-                audioPlayer.src = "data:audio/mp3;base64," + data.audioContent;
+                audioPlayer.src = "data:" + data.mimeType + ";base64," + data.audioContent;
                 audioPlayer.style.display = 'block';
                 audioPlayer.play();
             }
         } catch (err) {
-            alert("Something went wrong!");
+            alert("Network Error! Check console.");
         } finally {
             loading.style.display = 'none';
         }
